@@ -7,8 +7,15 @@ using Object = UnityEngine.Object;
 
 public class FacialAnimationPathModifier : EditorWindow
 {
+    private GameObject faceMesh;
     private string name;
     private DefaultAsset folderPath;
+
+    private bool isEyeBone = false;
+    private GameObject leftEye;
+    private GameObject rightEye;
+    private string leftEyePath;
+    private string rightEyePath;
 
     [UnityEditor.MenuItem("YuSa64/Facial Path Modifier")]
     public static void ShowWindow()
@@ -18,8 +25,18 @@ public class FacialAnimationPathModifier : EditorWindow
 
     private void OnGUI()
     {
-        name = EditorGUILayout.TextField("얼굴 메쉬 이름", name);
+        faceMesh = (GameObject)EditorGUILayout.ObjectField("얼굴 메쉬", faceMesh, typeof(GameObject), true);
+        name = faceMesh?.name;
         folderPath = (DefaultAsset)EditorGUILayout.ObjectField("폴더", folderPath, typeof(DefaultAsset), false);
+        isEyeBone = EditorGUILayout.Toggle("눈이 본으로 움직일 경우", isEyeBone);
+
+        if (isEyeBone)
+        {
+            leftEye = (GameObject)EditorGUILayout.ObjectField("왼쪽 눈", leftEye, typeof(GameObject), true);
+            rightEye = (GameObject)EditorGUILayout.ObjectField("오른쪽 눈", rightEye, typeof(GameObject), true);
+            leftEyePath = (leftEye != null) ? AnimationUtility.CalculateTransformPath(leftEye.transform, leftEye.transform.root) : "";
+            rightEyePath = (rightEye != null) ? AnimationUtility.CalculateTransformPath(rightEye.transform, rightEye.transform.root) : "";
+        }
 
         if (GUILayout.Button("패스 수정"))
         {
@@ -98,6 +115,14 @@ public class FacialAnimationPathModifier : EditorWindow
 
             // Fix blendShape paths
             lines[i] = lines[i].Replace("blendShape1.", "");
+
+            // Fix eye bone paths
+            if (isEyeBone)
+            {
+                lines[i] = lines[i].Replace("Body/eye_grp/eyeBall_L", leftEyePath);
+                lines[i] = lines[i].Replace("Body/eye_grp/eyeBall_R", rightEyePath);
+            }
+
         }
 
         // Write the modified content back to the file
