@@ -4,15 +4,18 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 using Object = UnityEngine.Object;
+using System;
+using System.Linq;
 
 public class FacialAnimationPathModifier : EditorWindow
 {
     private GameObject faceMesh;
     private string name;
-    private bool inputFaceName = false;
+    private bool inputMeshName = false;
     private DefaultAsset folderPath;
 
     private bool isEyeBone = false;
+    private bool inputPath = false;
     private GameObject leftEye;
     private GameObject rightEye;
     private string leftEyePath;
@@ -26,20 +29,28 @@ public class FacialAnimationPathModifier : EditorWindow
 
     private void OnGUI()
     {
-        inputFaceName = EditorGUILayout.Toggle("얼굴 메쉬 직접 입력하기", inputFaceName);
-        isEyeBone = EditorGUILayout.Toggle("눈이 본으로 움직일 경우", isEyeBone);
-        if(!inputFaceName){
+        inputMeshName = EditorGUILayout.Toggle("직접 입력하기", inputMeshName);
+        if(!inputMeshName)
+        {
             faceMesh = (GameObject)EditorGUILayout.ObjectField("얼굴 메쉬", faceMesh, typeof(GameObject), true);
             name = faceMesh != null ? faceMesh.name : "";
         } else {
             name = EditorGUILayout.TextField("얼굴 메쉬 이름", name);
         }
+        isEyeBone = EditorGUILayout.Toggle("눈이 본으로 움직일 경우", isEyeBone);
         if (isEyeBone)
         {
-            leftEye = (GameObject)EditorGUILayout.ObjectField("왼쪽 눈", leftEye, typeof(GameObject), true);
-            rightEye = (GameObject)EditorGUILayout.ObjectField("오른쪽 눈", rightEye, typeof(GameObject), true);
-            leftEyePath = (leftEye != null) ? AnimationUtility.CalculateTransformPath(leftEye.transform, leftEye.transform.root) : "";
-            rightEyePath = (rightEye != null) ? AnimationUtility.CalculateTransformPath(rightEye.transform, rightEye.transform.root) : "";
+            inputPath = EditorGUILayout.Toggle("본 경로 직접 입력하기", inputPath);
+            if(!inputPath)
+            {
+                leftEye = (GameObject)EditorGUILayout.ObjectField("왼쪽 눈", leftEye, typeof(GameObject), true);
+                rightEye = (GameObject)EditorGUILayout.ObjectField("오른쪽 눈", rightEye, typeof(GameObject), true);
+                leftEyePath = (leftEye != null) ? AnimationUtility.CalculateTransformPath(leftEye.transform, leftEye.transform.root) : "";
+                rightEyePath = (rightEye != null) ? AnimationUtility.CalculateTransformPath(rightEye.transform, rightEye.transform.root) : "";
+            } else {
+                leftEyePath = EditorGUILayout.TextField("왼쪽 눈 경로", leftEyePath);
+                rightEyePath = EditorGUILayout.TextField("오른쪽 눈 경로", rightEyePath);
+            }
         }
         folderPath = (DefaultAsset)EditorGUILayout.ObjectField("폴더", folderPath, typeof(DefaultAsset), false);
 
@@ -55,7 +66,8 @@ public class FacialAnimationPathModifier : EditorWindow
     {
         if (string.IsNullOrEmpty(name))
         {
-            if(inputFaceName) EditorUtility.DisplayDialog("Error", "얼굴 메쉬 이름을 입력해주세요.", "OK");
+            if(inputMeshName
+    ) EditorUtility.DisplayDialog("Error", "얼굴 메쉬 이름을 입력해주세요.", "OK");
             else EditorUtility.DisplayDialog("Error", "얼굴 메쉬를 지정해주세요.", "OK");
             return;
         }
@@ -68,6 +80,13 @@ public class FacialAnimationPathModifier : EditorWindow
             if (!Directory.Exists(convertedFolderPath))
             {
                 Directory.CreateDirectory(convertedFolderPath);
+            }
+
+            string[] fbxFiles = Directory.GetFiles(assetFolderPath, "*.fbx", SearchOption.AllDirectories);
+
+            foreach (string filePath in fbxFiles)
+            {
+                ExtractAnim(assetFolderPath, filePath);
             }
 
             // Get all .anim files in the folder
@@ -133,5 +152,22 @@ public class FacialAnimationPathModifier : EditorWindow
 
         // Write the modified content back to the file
         File.WriteAllLines(assetPath, lines);
+    }
+
+    private void ExtractAnim(string assetFolderPath, string assetPath)
+    {
+        // Load all assets at the path
+        Object[] allAssets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        // Filter the assets by type
+        AnimationClip[] clips = Array.FindAll(allAssets, asset => asset is AnimationClip).Cast<AnimationClip>().ToArray();
+        
+        foreach (AnimationClip clip in clips)
+        {
+            AnimationClip newClip = Object.Instantiate(clip);
+            if(newClip == null || newClip.name == "" || newClip.name.Contains("__preview__")) continue;
+            string fbxName = Path.GetFileNameWithoutExtension(assetPath);
+            string clipPath = Path.Combine(assetFolderPath, fbxName + "_" + newClip.name + ".anim");
+            AssetDatabase.CreateAsset(newClip, clipPath);
+        }
     }
 }
