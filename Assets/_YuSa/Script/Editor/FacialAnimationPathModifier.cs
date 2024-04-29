@@ -9,6 +9,7 @@ public class FacialAnimationPathModifier : EditorWindow
 {
     private GameObject faceMesh;
     private string name;
+    private bool inputFaceName = false;
     private DefaultAsset folderPath;
 
     private bool isEyeBone = false;
@@ -25,11 +26,14 @@ public class FacialAnimationPathModifier : EditorWindow
 
     private void OnGUI()
     {
-        faceMesh = (GameObject)EditorGUILayout.ObjectField("얼굴 메쉬", faceMesh, typeof(GameObject), true);
-        name = faceMesh != null ? faceMesh.name : "";
-        folderPath = (DefaultAsset)EditorGUILayout.ObjectField("폴더", folderPath, typeof(DefaultAsset), false);
+        inputFaceName = EditorGUILayout.Toggle("얼굴 메쉬 직접 입력하기", inputFaceName);
         isEyeBone = EditorGUILayout.Toggle("눈이 본으로 움직일 경우", isEyeBone);
-
+        if(!inputFaceName){
+            faceMesh = (GameObject)EditorGUILayout.ObjectField("얼굴 메쉬", faceMesh, typeof(GameObject), true);
+            name = faceMesh != null ? faceMesh.name : "";
+        } else {
+            name = EditorGUILayout.TextField("얼굴 메쉬 이름", name);
+        }
         if (isEyeBone)
         {
             leftEye = (GameObject)EditorGUILayout.ObjectField("왼쪽 눈", leftEye, typeof(GameObject), true);
@@ -37,6 +41,7 @@ public class FacialAnimationPathModifier : EditorWindow
             leftEyePath = (leftEye != null) ? AnimationUtility.CalculateTransformPath(leftEye.transform, leftEye.transform.root) : "";
             rightEyePath = (rightEye != null) ? AnimationUtility.CalculateTransformPath(rightEye.transform, rightEye.transform.root) : "";
         }
+        folderPath = (DefaultAsset)EditorGUILayout.ObjectField("폴더", folderPath, typeof(DefaultAsset), false);
 
         if (GUILayout.Button("패스 수정"))
         {
@@ -50,7 +55,8 @@ public class FacialAnimationPathModifier : EditorWindow
     {
         if (string.IsNullOrEmpty(name))
         {
-            EditorUtility.DisplayDialog("Error", "얼굴 메쉬를 지정해주세요.", "OK");
+            if(inputFaceName) EditorUtility.DisplayDialog("Error", "얼굴 메쉬 이름을 입력해주세요.", "OK");
+            else EditorUtility.DisplayDialog("Error", "얼굴 메쉬를 지정해주세요.", "OK");
             return;
         }
         if (folderPath != null)
