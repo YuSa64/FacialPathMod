@@ -26,7 +26,7 @@ public class FacialAnimationPathModifier : EditorWindow
     private void OnGUI()
     {
         faceMesh = (GameObject)EditorGUILayout.ObjectField("얼굴 메쉬", faceMesh, typeof(GameObject), true);
-        name = faceMesh?.name;
+        name = faceMesh != null ? faceMesh.name : "";
         folderPath = (DefaultAsset)EditorGUILayout.ObjectField("폴더", folderPath, typeof(DefaultAsset), false);
         isEyeBone = EditorGUILayout.Toggle("눈이 본으로 움직일 경우", isEyeBone);
 
@@ -50,7 +50,7 @@ public class FacialAnimationPathModifier : EditorWindow
     {
         if (string.IsNullOrEmpty(name))
         {
-            EditorUtility.DisplayDialog("Error", "얼굴 메쉬의 이름을 입력해주세요.", "OK");
+            EditorUtility.DisplayDialog("Error", "얼굴 메쉬를 지정해주세요.", "OK");
             return;
         }
         if (folderPath != null)
